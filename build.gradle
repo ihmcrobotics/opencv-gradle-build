@@ -1,0 +1,244 @@
+plugins {
+    id "com.jfrog.bintray" version "1.6"
+}
+
+import org.gradle.internal.os.OperatingSystem
+
+import java.nio.file.Files
+import java.nio.file.Paths;
+
+apply plugin: 'java'
+apply plugin: 'maven-publish'
+
+sourceCompatibility = 1.6
+targetCompatibility = 1.6
+
+def date = new Date()
+def formattedDate = date.format('yyMMdd')
+version = "3.1.0-${formattedDate}"
+
+def cmakeBuildDirectory = Paths.get(projectDir.canonicalPath, "build")
+def jarName = "${project.name}-${version.replace(".", "").replace("-" + formattedDate, "")}.jar"
+def pathToOpenCVJar = cmakeBuildDirectory.resolve("bin").resolve(jarName)
+
+def osName = ""
+
+if(OperatingSystem.current().isWindows()){
+    osName = "win64"
+}
+
+if(OperatingSystem.current().isLinux()){
+    osName = "linux64"
+}
+
+if(OperatingSystem.current().isMacOsX()){
+    osName = "osx"
+}
+
+repositories {
+  mavenLocal()
+  jcenter()
+  mavenCentral()
+  maven {
+    url  "http://dl.bintray.com/ihmcrobotics/maven-release"
+  }
+}
+
+task cmake(type: Exec) {
+    if(!Files.exists(cmakeBuildDirectory))
+    {
+        Files.createDirectories(cmakeBuildDirectory)
+    }
+
+    workingDir cmakeBuildDirectory.toString()
+
+    if(OperatingSystem.current().isWindows())
+    {
+        executable 'cmd'
+        args = ['/c', 'cmake', '-DBUILD_SHARED_LIBS=OFF', '-D WITH_CUDA=OFF', '-D WITH_FFMPEG=OFF', '-D WITH_OPENEXR=OFF', '-G', '"Visual Studio 14 2015 Win64"', '..']
+    }
+    else
+    {
+        executable 'cmake'
+        args = ['-DBUILD_SHARED_LIBS=OFF', '-D WITH_CUDA=OFF', '-D WITH_FFMPEG=OFF', '-D WITH_OPENEXR=OFF', '..']
+    }
+}
+
+task make(type: Exec, dependsOn: cmake) {
+    workingDir cmakeBuildDirectory.toString()
+    def processors = Runtime.runtime.availableProcessors()
+
+    if(OperatingSystem.current().isWindows())
+    {
+        executable 'cmd'
+        args = ['/c', 'msbuild', '/m', 'OpenCV.sln', '/t:Build', '/p:Configuration=Release', '/v:m']
+    }
+    else
+    {
+        executable 'make'
+        args = ["-j${processors}"]
+    }
+
+    outputs.file pathToOpenCVJar.toFile()
+    outputs.file cmakeBuildDirectory.resolve("src").toFile()
+}
+
+task openCVPlatformJar(type: Jar, dependsOn: make) {
+    baseName = "${project.name}-java-natives-${osName}"
+
+    manifest {
+        attributes(
+                "Created-By": "IHMC Gradle Build Script",
+                "Implementation-Title": "OpenCV Native Library, ${osName}",
+                "Implementation-Version": project.version,
+                "Implementation-Vendor": "Itseez",
+
+                "Bundle-Name": "${baseName}",
+                "Bundle-Version": project.version,
+                "Bundle-License": "https://opensource.org/licenses/BSD-3-Clause",
+                "Bundle-Vendor": "IHMC")
+    }
+
+    if(!OperatingSystem.current().isWindows()){
+      from(cmakeBuildDirectory.resolve("lib").toFile()) {
+          include '*java*.so'
+          include '*java*.dylib'
+          into 'org/opencv'
+      }
+    }
+    else {
+      from(cmakeBuildDirectory.resolve("bin").resolve("Release").toFile()) {
+          include '*java*.dll'
+          into 'org/opencv'
+      }
+    }
+}
+
+task openCVJar(type: Jar, dependsOn: make) {
+    manifest {
+        attributes(
+                "Created-By": "IHMC Gradle Build Script",
+                "Implementation-Title": "OpenCV",
+                "Implementation-Version": project.version,
+                "Implementation-Vendor": "Itseez",
+
+                "Bundle-Name": project.name,
+                "Bundle-Version": project.version,
+                "Bundle-License": "https://opensource.org/licenses/BSD-3-Clause",
+                "Bundle-Vendor": "IHMC")
+    }
+
+    from { zipTree(pathToOpenCVJar.toFile()) } {
+        exclude "META-INF/*"
+        exclude "META-INF"
+    }
+}
+
+task openCVSourceJar(type: Jar, dependsOn: make) {
+    classifier = "sources"
+    manifest {
+        attributes(
+                "Created-By": "IHMC Gradle Build Script",
+                "Implementation-Title": "OpenCV Java Sources",
+                "Implementation-Version": project.version,
+                "Implementation-Vendor": "Itseez",
+
+                "Bundle-Name": "${project.name}-sources",
+                "Bundle-Version": project.version,
+                "Bundle-License": "https://opensource.org/licenses/BSD-3-Clause",
+                "Bundle-Vendor": "IHMC")
+    }
+
+    from(cmakeBuildDirectory.resolve("src").toFile()) {
+        include '**/*.java'
+    }
+}
+
+publishing {
+    println configurations.runtime.allDependencies
+    publications {
+        mavenOpenCV(MavenPublication) {
+            groupId 'us.ihmc.thirdparty.org.opencv'
+
+            artifact openCVJar
+
+            artifact openCVSourceJar
+
+            pom.withXml {
+                def licenseNode = asNode().appendNode('licenses').appendNode('license')
+                licenseNode.appendNode('name', 'BSD 3-Clause License')
+                licenseNode.appendNode('url', 'https://opensource.org/licenses/BSD-3-Clause')
+
+                def depsNode = asNode().appendNode('dependencies')
+
+                ['win64', 'linux64', 'osx'].each{ dep ->
+                    def newDependencyNode = depsNode.appendNode('dependency')
+                    newDependencyNode.appendNode('groupId', 'us.ihmc.thirdparty.org.opencv')
+                    newDependencyNode.appendNode('artifactId', "${project.name}-java-natives-${dep}")
+                    newDependencyNode.appendNode('version', project.version)
+                    newDependencyNode.appendNode('scope', 'runtime')
+                }
+            }
+        }
+
+        mavenOpenCVPlatformJar(MavenPublication) {
+            groupId 'us.ihmc.thirdparty.org.opencv'
+            artifactId "${project.name}-java-natives-${osName}"
+            artifact openCVPlatformJar
+
+            pom.withXml {
+                def licenseNode = asNode().appendNode('licenses').appendNode('license')
+                licenseNode.appendNode('name', 'BSD 3-Clause License')
+                licenseNode.appendNode('url', 'https://opensource.org/licenses/BSD-3-Clause')
+            }
+        }
+    }
+}
+
+bintray {
+    user = project.hasProperty("bintray_user") ? project.bintray_user : "invalid"
+    key = project.hasProperty("bintray_key") ? project.bintray_key : "invalid"
+
+    if (user.equals("invalid")) {
+        project.logger.debug("Bintray user name property not set. Please set the 'bintray_user' property in ~/.gradle/gradle.properties. See https://github.com/bintray/gradle-bintray-plugin")
+    }
+
+    if (key.equals("invalid")) {
+        project.logger.debug("Bintray API key property not set. Please set the 'bintray_key' property in ~/.gradle/gradle.properties. See https://github.com/bintray/gradle-bintray-plugin")
+    }
+
+    dryRun = false
+    publish = false
+
+    if(project.bintrayPublishType.equals("WRAPPER"))
+    {
+        publications = ["mavenOpenCV"]
+    }
+    else if(project.bintrayPublishType.equals("PLATFORM"))
+    {
+        publications = ["mavenOpenCVPlatformJar"]
+    }
+    else
+    {
+        throw new GradleException("Invalid Bintray publication type: ${project.bintrayPublishType}, must be WRAPPER for the Java upload or PLATFORM for the native library upload")
+    }
+
+    pkg {
+        repo = "maven-vendor"
+        userOrg = "ihmcrobotics"
+        name = "OpenCVJavaBindings"
+        desc = "Maven repository providing the stock OpenCV Java bindings, vendored by IHMC Robotics"
+
+        websiteUrl = "http://opencv.org"
+        issueTrackerUrl = "https://github.com/itseez/opencv/issues"
+        vcsUrl = "https://github.com/itseez/opencv.git"
+
+        licenses = ['BSD 3-Clause']
+        labels = ['java', 'vision', 'opencv', 'jni', 'vendored']
+
+        version {
+            name = project.version
+            released = new Date()
+        }
+    }
+}
