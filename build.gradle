@@ -15,7 +15,7 @@ targetCompatibility = 1.6
 
 def date = new Date()
 def formattedDate = date.format('yyMMdd')
-version = "3.1.0-${formattedDate}"
+version = "3.2.0-${formattedDate}"
 
 def cmakeBuildDirectory = Paths.get(projectDir.canonicalPath, "build")
 def jarName = "${project.name}-${version.replace(".", "").replace("-" + formattedDate, "")}.jar"
@@ -54,13 +54,13 @@ task cmake(type: Exec) {
 
     if(OperatingSystem.current().isWindows())
     {
-        executable 'cmd'
-        args = ['/c', 'cmake', '-DBUILD_SHARED_LIBS=OFF', '-D WITH_CUDA=OFF', '-D WITH_FFMPEG=OFF', '-D WITH_OPENEXR=OFF', '-G', '"Visual Studio 14 2015 Win64"', '..']
+        executable = 'cmd'
+        args = ['/c', 'cmake', '-DBUILD_SHARED_LIBS=OFF', '-D WITH_CUDA=OFF', '-D WITH_FFMPEG=OFF', '-D WITH_OPENEXR=OFF', '-DOPENCV_EXTRA_MODULES_PATH=../opencv_contrib/modules', '-G', '"Visual Studio 14 2015 Win64"', '../opencv']
     }
     else
     {
-        executable 'cmake'
-        args = ['-DBUILD_SHARED_LIBS=OFF', '-D WITH_CUDA=OFF', '-D WITH_FFMPEG=OFF', '-D WITH_OPENEXR=OFF', '..']
+        executable = 'cmake'
+        args = ['-DBUILD_SHARED_LIBS=OFF', '-D WITH_CUDA=OFF', '-D WITH_FFMPEG=OFF', '-D WITH_OPENEXR=OFF', '-DOPENCV_EXTRA_MODULES_PATH=../opencv_contrib/modules', '../opencv']
     }
 }
 
@@ -70,17 +70,17 @@ task make(type: Exec, dependsOn: cmake) {
 
     if(OperatingSystem.current().isWindows())
     {
-        executable 'cmd'
+        executable = 'cmd'
         args = ['/c', 'msbuild', '/m', 'OpenCV.sln', '/t:Build', '/p:Configuration=Release', '/v:m']
     }
     else
     {
-        executable 'make'
+        executable = 'make'
         args = ["-j${processors}"]
     }
 
-    outputs.file pathToOpenCVJar.toFile()
-    outputs.file cmakeBuildDirectory.resolve("src").toFile()
+    // outputs.file pathToOpenCVJar.toFile()
+    // outputs.file cmakeBuildDirectory.resolve("src").toFile()
 }
 
 task openCVPlatformJar(type: Jar, dependsOn: make) {
