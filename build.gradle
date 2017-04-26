@@ -79,8 +79,8 @@ task make(type: Exec, dependsOn: cmake) {
         args = ["-j${processors}"]
     }
 
-    // outputs.file pathToOpenCVJar.toFile()
-    // outputs.file cmakeBuildDirectory.resolve("src").toFile()
+    outputs.file pathToOpenCVJar.toFile()
+    outputs.file cmakeBuildDirectory.resolve("src").toFile()
 }
 
 task openCVPlatformJar(type: Jar, dependsOn: make) {
