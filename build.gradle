@@ -55,7 +55,7 @@ task cmake(type: Exec) {
     if(OperatingSystem.current().isWindows())
     {
         executable = 'cmd'
-        args = ['/c', 'cmake', '-DBUILD_SHARED_LIBS=OFF', '-D WITH_CUDA=OFF', '-D WITH_FFMPEG=OFF', '-D WITH_OPENEXR=OFF', '-DOPENCV_EXTRA_MODULES_PATH=../opencv_contrib/modules', '-G', '"Visual Studio 14 2015 Win64"', '../opencv']
+        args = ['/c', 'cmake', '-DBUILD_SHARED_LIBS=OFF', '-D WITH_CUDA=OFF', '-D WITH_FFMPEG=OFF', '-D WITH_OPENEXR=OFF', '-DOPENCV_EXTRA_MODULES_PATH=../opencv_contrib/modules', '-G', '"Visual Studio 15 2017 Win64"', '../opencv']
     }
     else
     {
