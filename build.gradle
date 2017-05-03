@@ -55,12 +55,12 @@ task cmake(type: Exec) {
     if(OperatingSystem.current().isWindows())
     {
         executable = 'cmd'
-        args = ['/c', 'cmake', '-DCMAKE_BUILD_TYPE=RELEASE', '-DBUILD_SHARED_LIBS=OFF', '-DWITH_CUDA=OFF', '-DWITH_FFMPEG=OFF', '-DWITH_OPENEXR=OFF', '-DWITH_WEBP=OFF', '-DOPENCV_EXTRA_MODULES_PATH=../opencv_contrib/modules', '-G', '"Visual Studio 15 2017 Win64"', '../opencv']
+        args = ['/c', 'cmake', '-DCMAKE_BUILD_TYPE=RELEASE', '-DBUILD_SHARED_LIBS=OFF', '-DWITH_CUDA=OFF', '-DWITH_FFMPEG=OFF', '-DWITH_OPENEXR=ON', '-DWITH_WEBP=ON', '-DBUILD_WITH_STATIC_CRT=ON', '-DOPENCV_EXTRA_MODULES_PATH=../opencv_contrib/modules', '-G', '"Visual Studio 15 2017 Win64"', '../opencv']
     }
     else
     {
         executable = 'cmake'
-        args = ['-DCMAKE_BUILD_TYPE=RELEASE', '-DBUILD_SHARED_LIBS=OFF', '-DWITH_CUDA=OFF', '-DWITH_FFMPEG=OFF', '-DWITH_OPENEXR=OFF', '-DWITH_WEBP=OFF', '-DOPENCV_EXTRA_MODULES_PATH=../opencv_contrib/modules', '../opencv']
+        args = ['-DCMAKE_BUILD_TYPE=RELEASE', '-DBUILD_SHARED_LIBS=OFF', '-DWITH_CUDA=OFF', '-DWITH_FFMPEG=OFF', '-DWITH_OPENEXR=ON', '-DWITH_WEBP=ON', '-DOPENCV_EXTRA_MODULES_PATH=../opencv_contrib/modules', '../opencv']
     }
 }
 
