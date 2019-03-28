@@ -17,9 +17,9 @@ def date = new Date()
 def formattedDate = date.format('yyMMdd')
 version = "3.2.0-${formattedDate}"
 
-def cmakeBuildDirectory = Paths.get(projectDir.canonicalPath, "build")
+def cmakeBuildDirectory = Paths.get(projectDir.canonicalPath, "buildc")
 def jarName = "${project.name}-${version.replace(".", "").replace("-" + formattedDate, "")}.jar"
-def pathToOpenCVJar = cmakeBuildDirectory.resolve("bin").resolve(jarName)
+def pathToOpenCVJar = cmakeBuildDirectory.resolve("bin").resolve(jarName) // TODO This appears to be Eclipse only, switch to Gradle
 
 def osName = ""
 
@@ -55,12 +55,33 @@ task cmake(type: Exec) {
     if(OperatingSystem.current().isWindows())
     {
         executable = 'cmd'
-        args = ['/c', 'cmake', '-DCMAKE_BUILD_TYPE=RELEASE', '-DBUILD_SHARED_LIBS=OFF', '-DWITH_CUDA=OFF', '-DWITH_FFMPEG=OFF', '-DWITH_OPENEXR=ON', '-DWITH_WEBP=ON', '-DBUILD_WITH_STATIC_CRT=ON', '-DOPENCV_EXTRA_MODULES_PATH=../opencv_contrib/modules', '-DBUILD_opencv_hdf=OFF', '-G', '"Visual Studio 15 2017 Win64"', '../opencv']
+        args = ['/c', 
+                'cmake', 
+                '-DCMAKE_BUILD_TYPE=RELEASE', 
+                '-DBUILD_SHARED_LIBS=OFF', 
+                '-DWITH_CUDA=OFF', 
+                '-DWITH_FFMPEG=OFF', 
+                '-DWITH_OPENEXR=ON', 
+                '-DWITH_WEBP=ON', 
+                '-DBUILD_WITH_STATIC_CRT=ON', 
+                '-DOPENCV_EXTRA_MODULES_PATH=../opencv_contrib/modules', 
+                '-DBUILD_opencv_hdf=OFF', 
+                '-G', 
+                '"Visual Studio 15 2017 Win64"', 
+                '../opencv']
     }
     else
     {
         executable = 'cmake'
-        args = ['-DCMAKE_BUILD_TYPE=RELEASE', '-DBUILD_SHARED_LIBS=OFF', '-DWITH_CUDA=OFF', '-DWITH_FFMPEG=OFF', '-DWITH_OPENEXR=ON', '-DWITH_WEBP=ON', '-DOPENCV_EXTRA_MODULES_PATH=../opencv_contrib/modules', '-DBUILD_opencv_hdf=OFF', '../opencv']
+        args = ['-DCMAKE_BUILD_TYPE=RELEASE', 
+                '-DBUILD_SHARED_LIBS=OFF', 
+                '-DWITH_CUDA=OFF', 
+                '-DWITH_FFMPEG=OFF', 
+                '-DWITH_OPENEXR=ON', 
+                '-DWITH_WEBP=ON', 
+                '-DOPENCV_EXTRA_MODULES_PATH=../opencv_contrib/modules', 
+                '-DBUILD_opencv_hdf=OFF', 
+                '../opencv']
     }
 }
 
@@ -100,14 +121,14 @@ task openCVPlatformJar(type: Jar, dependsOn: make) {
     }
 
     if(!OperatingSystem.current().isWindows()){
-      from(cmakeBuildDirectory.resolve("lib").toFile()) {
+      from(cmakeBuildDirectory.resolve("lib").toFile()) {   // TODO check this path
           include '*java*.so'
           include '*java*.dylib'
           into 'org/opencv'
       }
     }
     else {
-      from(cmakeBuildDirectory.resolve("bin").resolve("Release").toFile()) {
+      from(cmakeBuildDirectory.resolve("bin").resolve("Release").toFile()) {  // TODO switch to gradle build artifact
           include '*java*.dll'
           into 'org/opencv'
       }
